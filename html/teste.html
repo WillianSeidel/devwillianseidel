@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Polly: O Terror dos Sete Mares</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #222; font-family: 'Arial', sans-serif; }
+        canvas { display: block; background: linear-gradient(#40a4df, #a0e4ff); margin: 0 auto; border: 5px solid #5d4037; }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; text-shadow: 2px 2px #000; font-size: 20px; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    🏆 Tesouros: <span id="score">0</span><br>
+    ❤️ Penas: <span id="health">3</span>
+</div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+
+// Configurações do Jogo
+canvas.width = 800;
+canvas.height = 400;
+const gravity = 0.8;
+let score = 0;
+
+// Estado do Capitão Polly
+const polly = {
+    x: 50,
+    y: 300,
+    width: 40,
+    height: 40,
+    color: '#FFD700', // Dourado/Verde (Papagaio)
+    dy: 0,
+    jumpForce: -15,
+    grounded: false,
+    speed: 5
+};
+
+// Mapa: Chão e Plataformas
+const platforms = [
+    { x: 0, y: 380, w: 800, h: 20 },   // Chão
+    { x: 200, y: 280, w: 150, h: 15 }, // Plataforma 1
+    { x: 450, y: 220, w: 150, h: 15 }, // Plataforma 2
+    { x: 100, y: 150, w: 100, h: 15 }  // Plataforma 3
+];
+
+// Inimigo: Gato Pirata
+const enemies = [
+    { x: 500, y: 340, w: 40, h: 40, color: '#800080', speed: 2, range: 100, startX: 500 }
+];
+
+// Controles
+const keys = {};
+window.addEventListener('keydown', e => keys[e.code] = true);
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+function update() {
+    // Movimento Lateral
+    if (keys['ArrowRight']) polly.x += polly.speed;
+    if (keys['ArrowLeft']) polly.x -= polly.speed;
+
+    // Pulo
+    if (keys['Space'] && polly.grounded) {
+        polly.dy = polly.jumpForce;
+        polly.grounded = false;
+    }
+
+    // Gravidade
+    polly.dy += gravity;
+    polly.y += polly.dy;
+
+    // Colisão com Plataformas
+    polly.grounded = false;
+    platforms.forEach(plat => {
+        if (polly.x < plat.x + plat.w &&
+            polly.x + polly.width > plat.x &&
+            polly.y < plat.y + plat.h &&
+            polly.y + polly.height > plat.y) {
+            
+            if (polly.dy > 0) { // Caindo
+                polly.dy = 0;
+                polly.y = plat.y - polly.height;
+                polly.grounded = true;
+            }
+        }
+    });
+
+    // Movimentação dos Gatos (IA simples)
+    enemies.forEach(cat => {
+        cat.x += cat.speed;
+        if (Math.abs(cat.x - cat.startX) > cat.range) cat.speed *= -1;
+
+        // Colisão com Inimigo (Hitbox simples)
+        if (polly.x < cat.x + cat.w && polly.x + polly.width > cat.x &&
+            polly.y < cat.y + cat.h && polly.y + polly.height > cat.y) {
+            if (polly.dy > 5) { // Se pular em cima, derrota o gato
+                cat.y = -1000;
+                score += 100;
+                scoreEl.innerText = score;
+            } else {
+                // Reinicia posição se bater de lado
+                polly.x = 50;
+                polly.y = 300;
+            }
+        }
+    });
+
+    draw();
+    requestAnimationFrame(update);
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Desenhar Sol (Cenário alegre)
+    ctx.fillStyle = '#FFF176';
+    ctx.beginPath();
+    ctx.arc(700, 60, 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Desenhar Plataformas
+    ctx.fillStyle = '#795548'; // Marrom madeira
+    platforms.forEach(plat => ctx.fillRect(plat.x, plat.y, plat.w, plat.h));
+
+    // Desenhar Gato (Inimigo)
+    enemies.forEach(cat => {
+        ctx.fillStyle = cat.color;
+        ctx.fillRect(cat.x, cat.y, cat.w, cat.h);
+        // Orelhinhas
+        ctx.beginPath();
+        ctx.moveTo(cat.x, cat.y);
+        ctx.lineTo(cat.x + 10, cat.y - 10);
+        ctx.lineTo(cat.x + 20, cat.y);
+        ctx.fill();
+    });
+
+    // Desenhar Capitão Polly
+    ctx.fillStyle = polly.color;
+    ctx.fillRect(polly.x, polly.y, polly.width, polly.height);
+    // Bico do Papagaio
+    ctx.fillStyle = '#FF5722';
+    ctx.fillRect(polly.x + 30, polly.y + 10, 15, 10);
+}
+
+update();
+</script>
+</body>
+</html>
